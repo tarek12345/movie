@@ -1,75 +1,134 @@
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react'
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-function Users() {
-  const [users , setUsers] = useState([]);
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons';
+import ModaluserEdit from '../../composants/modaluser/modaluser';
+import ModaluserDelete from '../../composants/modalDelete/modalDelete';
 
-  const AllUser = () => {
-      axios.get('https://jsonplaceholder.typicode.com/users')
-        .then(response => {
-          setUsers(response.data);
+function Users() {
+  const [users, setUsers] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [showModalDelete, setShowModalDelete] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const toastShown = useRef(false);
+  const apiUrl = process.env.REACT_APP_API_URL;
+
+  const fetchUsers = () => {
+    axios
+      .get(`${apiUrl}/users`)
+      .then((response) => {
+        setUsers(response.data);
+        if (!toastShown.current) {
           toast.success('Data fetched successfully!', {
             position: "top-right",
-            autoClose: 3000, // 3 seconds
+            autoClose: 3000,
           });
-        })
-        .catch(error => {
-          console.error('There was an error!', error);
+          toastShown.current = true;
+        }
+      })
+      .catch((error) => {
+        console.error('There was an error!', error);
+        if (!toastShown.current) {
           toast.error('Failed to fetch data.', {
             position: "top-right",
-            autoClose: 3000, // 3 seconds
+            autoClose: 3000,
           });
-        });
+          toastShown.current = true;
+        }
+      });
+  };
+
+  const handleOpenModal = (user) => {
+    if (user) {
+      setSelectedUser(user); // Store the selected user for editing
+      setShowModal(true); // Show the edit modal
     }
-    useEffect(() => {
-      AllUser()
-    }, [])
-    
+  };
+
+  const handleDelete = (userId) => {
+    setUsers(users.filter(user => user.id !== userId)); // Update state by removing the deleted user
+  };
+
+  const handleOpenModalDelete = (user) => {
+    console.log(user);
+    setSelectedUser(user);
+    setShowModalDelete(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleCloseModalDelete = () => {
+    setShowModalDelete(false);
+    setSelectedUser(null);
+  };
+
+  useEffect(() => {
+    fetchUsers(); // Fetch users when component mounts
+  }, []);
+
   return (
-<div className='users'>
-<table className="table">
-    <thead>
-      <tr>
-      <th scope="col">id</th>
-      <th scope="col">username</th>
-        <th scope="col">phone</th>
-        <th scope="col"> email</th>
-        <th scope="col">company</th>
-        <th scope="col">address</th>
-
-      </tr>
-    </thead>
-    <tbody>
-  {users.map(user => (
-    <tr >
-      <td>{user.id}</td>
-      <td>{user.username}</td>
-      <td>{user.phone}</td>
-      <td>{user.email}</td>
-      <td>
-      <tr className='row'> 
-          <td>{user.company.bs}</td> {/* Accessing company name */}
-          <td>{user.company.catchPhrase}</td> {/* Accessing company name */}
-       <td>{user.company.name}</td>
-        </tr>
-        </td>  {/* Accessing city in the address */}
-        <td>
-        <tr className='row'> 
-          <td>{user.address.city}</td> {/* Accessing company name */}
-          <td>{user.address.street }</td> {/* Accessing company name */}
-           <td>{user.address.zipcode }</td>
-        </tr>
-        </td>  {/* Accessing city in the address */}
-    </tr>
-  ))}
-</tbody>
-
-  </table>
- <ToastContainer />
-   
+    <div className="users">
+      <table className="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">Id</th>
+            <th scope="col">Username</th>
+            <th scope="col">Phone</th>
+            <th scope="col">Email</th>
+            <th scope="col">Address</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id}>
+              <td>{user.id}</td>
+              <td>{user.username}</td>
+              <td>{user.phone}</td>
+              <td>{user.email}</td>
+              <td>{user.address.city} {user.address.street} {user.address.zipcode}</td>
+              <td>
+                <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={() => handleOpenModal(user)}
+                >
+                  <FontAwesomeIcon icon={faPenToSquare} />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={() => handleOpenModalDelete(user)}
+                >
+                  <FontAwesomeIcon icon={faTrash} />
+                </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ModaluserEdit
+        user={selectedUser}
+        showModal={showModal}
+        handleClose={handleCloseModal}
+        onUpdate={fetchUsers} // Pass the fetchUsers function to refresh the list
+      />
+      <ModaluserDelete
+        user={selectedUser}
+        showModalDelete={showModalDelete}
+        handleClose={handleCloseModalDelete} // Consistent naming
+        handleDelete={handleDelete}
+      />
+      <ToastContainer />
     </div>
-  )
+  );
 }
 
-export default Users
+export default Users;
